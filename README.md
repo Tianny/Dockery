@@ -5,4 +5,7 @@
 
 A simple HDFS client (CDH) with kerberos.
 
-Reuqired: HDFS configuration file including core-site.xml, hdfs-site.xml ssl-client.xml and kerberos client file called krb5.conf.
+Reuqired: 
+
+- HDFS configuration file including core-site.xml, hdfs-site.xml ssl-client.xml
+- kerberos client file called krb5.conf
