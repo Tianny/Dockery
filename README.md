@@ -1,7 +1,7 @@
 # Dockery
 :whale:Awesome Dockerfile.
 
-## Dockerfile_HDFS_
+## Dockerfile_HDFS
 
 A simple HDFS client (CDH) with kerberos.
 
