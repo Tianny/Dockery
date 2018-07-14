@@ -1,5 +1,5 @@
 FROM ubuntu
-MAINTAINER xietian@dxy.cn
+MAINTAINER tiannyxie@gmai.com
 
 RUN apt-get update && apt-get install -y krb5-user
 
