@@ -1,5 +1,3 @@
-## 制作 HDFS Client 镜像
-
 ## 下载 CDH 二进制包
 
 ```bash
@@ -72,6 +70,10 @@ find . -name '*.jar' -exec bash -c 'jar -tf {} | grep -iH --label {} org.apache.
 └── libexec
     └── hadoop-config.sh
 ```
+
+## 构建镜像前准备
+
+- 替换 hdfs-site.xml、core-site.xml、krb5.conf 文件为生成环境
 
 ## 构建镜像
 
