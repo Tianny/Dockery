@@ -73,7 +73,7 @@ find . -name '*.jar' -exec bash -c 'jar -tf {} | grep -iH --label {} org.apache.
 
 ## 构建镜像前准备
 
-- 替换 hdfs-site.xml、core-site.xml、krb5.conf 文件为生成环境
+- 替换 hdfs-site.xml、core-site.xml、krb5.conf 文件为生产环境
 
 ## 构建镜像
 
