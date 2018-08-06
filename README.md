@@ -1,11 +1,10 @@
 # Dockery
 :whale:Awesome Dockerfile.
 
-## Dockerfile_HDFS
+## hadoop-client
+
+A simple Hadoop client (CDH) with kerberos.
+
+## hdfs-client
 
 A simple HDFS client (CDH) with kerberos.
-
-Reuqired: 
-
-- HDFS configuration file including core-site.xml, hdfs-site.xml ssl-client.xml
-- kerberos client file called krb5.conf
