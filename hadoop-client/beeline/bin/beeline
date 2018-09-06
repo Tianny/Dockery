@@ -1,0 +1,384 @@
+#!/bin/bash
+  # Reference: http://stackoverflow.com/questions/59895/can-a-bash-script-tell-what-directory-its-stored-in
+  SOURCE="${BASH_SOURCE[0]}"
+  BIN_DIR="$( dirname "$SOURCE" )"
+  while [ -h "$SOURCE" ]
+  do
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+    BIN_DIR="$( cd -P "$( dirname "$SOURCE"  )" && pwd )"
+  done
+  BIN_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  LIB_DIR=$BIN_DIR/../lib
+
+# init Kerveros Keytab
+if [[ "$PRINCIPAL_NAME" ]]
+  then
+    kinit -kt /root/kerberos.keytab $PRINCIPAL_NAME
+fi
+# end init
+
+export JAVA_HOME=/usr
+export HIVE_CONF_DIR="/opt/beeline/conf"
+HIVE_LIB=/opt/beeline/jars
+
+BIGTOP_DEFAULTS_DIR=${BIGTOP_DEFAULTS_DIR-$BIN_DIR/../etc/default}
+[ -n "${BIGTOP_DEFAULTS_DIR}" -a -r ${BIGTOP_DEFAULTS_DIR}/hbase ] && . ${BIGTOP_DEFAULTS_DIR}/hbase
+
+export HIVE_HOME=$LIB_DIR/hive
+
+# exec beeline
+
+# Set Hadoop User classpath to true so that httpclient jars are taken from
+# hive lib instead of hadoop lib.
+export HADOOP_USER_CLASSPATH_FIRST=true
+
+# If process is backgrounded, don't change terminal settings
+if [[ ( ! $(ps -o stat= -p $$) =~ "+" ) && ! ( -p /dev/stdin ) ]]; then
+  export HADOOP_CLIENT_OPTS="$HADOOP_CLIENT_OPTS -Djline.terminal=jline.UnsupportedTerminal"
+fi
+
+cygwin=false
+case "`uname`" in
+   CYGWIN*) cygwin=true;;
+esac
+
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+
+# hive config start
+this="$0"
+while [ -h "$this" ]; do
+  ls=`ls -ld "$this"`
+  link=`expr "$ls" : '.*-> \(.*\)$'`
+  if expr "$link" : '.*/.*' > /dev/null; then
+    this="$link"
+  else
+    this=`dirname "$this"`/"$link"
+  fi
+done
+
+# convert relative path to absolute path
+bin=`dirname "$this"`
+script=`basename "$this"`
+bin=`cd "$bin"; pwd`
+this="$bin/$script"
+
+# the root of the Hive installation
+if [[ -z $HIVE_HOME ]] ; then
+  export HIVE_HOME=`dirname "$bin"`
+fi
+
+#check to see if the conf dir is given as an optional argument
+while [ $# -gt 0 ]; do    # Until you run out of parameters . . .
+  case "$1" in
+    --config)
+        shift
+        confdir=$1
+        shift
+        HIVE_CONF_DIR=$confdir
+        ;;
+    --auxpath)
+        shift
+        HIVE_AUX_JARS_PATH=$1
+        shift
+        ;;
+    *)
+        break;
+        ;;
+  esac
+done
+
+
+export HIVE_AUX_JARS_PATH=$HIVE_AUX_JARS_PATH
+
+# Default to use 256MB 
+export HADOOP_HEAPSIZE=${HADOOP_HEAPSIZE:-256}
+# hive config end
+SERVICE="beeline"
+
+if [ "$SERVICE" = "" ] ; then
+  if [ "$HELP" = "_help" ] ; then
+    SERVICE="help"
+  else
+    SERVICE="cli"
+  fi
+fi
+
+if [ -f "${HIVE_CONF_DIR}/hive-env.sh" ]; then
+  . "${HIVE_CONF_DIR}/hive-env.sh"
+fi
+
+if [[ -z "$SPARK_HOME" ]]
+then
+  bin=`dirname "$0"`
+  # many hadoop installs are in dir/{spark,hive,hadoop,..}
+  sparkHome=$(readlink -f $bin/../../spark)
+  if [[ -d $sparkHome ]]
+  then
+    export SPARK_HOME=$sparkHome
+  fi
+fi
+
+CLASSPATH="${HIVE_CONF_DIR}"
+
+
+# needed for execution
+if [ ! -f ${HIVE_LIB}/hive-exec-*.jar ]; then
+  echo "Missing Hive Execution Jar: ${HIVE_LIB}/hive-exec-*.jar"
+  exit 1;
+fi
+
+if [ ! -f ${HIVE_LIB}/hive-metastore-*.jar ]; then
+  echo "Missing Hive MetaStore Jar"
+  exit 2;
+fi
+
+# cli specific code
+if [ ! -f ${HIVE_LIB}/hive-cli-*.jar ]; then
+  echo "Missing Hive CLI Jar"
+  exit 3;
+fi
+
+for f in ${HIVE_LIB}/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+# add Spark assembly jar to the classpath
+if [[ -n "$SPARK_HOME" && !("$HIVE_SKIP_SPARK_ASSEMBLY" = "true") ]]
+then
+  sparkAssemblyPath=`ls ${SPARK_HOME}/lib/spark-assembly-*.jar`
+  CLASSPATH="${CLASSPATH}:${sparkAssemblyPath}"
+fi
+
+# add the auxillary jars such as serdes
+if [ -d "${HIVE_AUX_JARS_PATH}" ]; then
+  hive_aux_jars_abspath=`cd ${HIVE_AUX_JARS_PATH} && pwd`
+  for f in $hive_aux_jars_abspath/*.jar; do
+    if [[ ! -f $f ]]; then
+        continue;
+    fi
+    if $cygwin; then
+	f=`cygpath -w "$f"`
+    fi
+    AUX_CLASSPATH=${AUX_CLASSPATH}:$f
+    if [ "${AUX_PARAM}" == "" ]; then
+        AUX_PARAM=file://$f
+    else
+        AUX_PARAM=${AUX_PARAM},file://$f;
+    fi
+  done
+elif [ "${HIVE_AUX_JARS_PATH}" != "" ]; then 
+  HIVE_AUX_JARS_PATH=`echo $HIVE_AUX_JARS_PATH | sed 's/,/:/g'`
+  if $cygwin; then
+      HIVE_AUX_JARS_PATH=`cygpath -p -w "$HIVE_AUX_JARS_PATH"`
+      HIVE_AUX_JARS_PATH=`echo $HIVE_AUX_JARS_PATH | sed 's/;/,/g'`
+  fi
+  AUX_CLASSPATH=${AUX_CLASSPATH}:${HIVE_AUX_JARS_PATH}
+  AUX_PARAM="file://$(echo ${HIVE_AUX_JARS_PATH} | sed 's/:/,file:\/\//g')"
+fi
+
+# adding jars from auxlib directory
+for f in ${HIVE_HOME}/auxlib/*.jar; do
+  if [[ ! -f $f ]]; then
+      continue;
+  fi
+  if $cygwin; then
+      f=`cygpath -w "$f"`
+  fi
+  AUX_CLASSPATH=${AUX_CLASSPATH}:$f
+  if [ "${AUX_PARAM}" == "" ]; then
+    AUX_PARAM=file://$f
+  else
+    AUX_PARAM=${AUX_PARAM},file://$f;
+  fi
+done
+if $cygwin; then
+    CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+    CLASSPATH=${CLASSPATH};${AUX_CLASSPATH}
+else
+    CLASSPATH=${CLASSPATH}:${AUX_CLASSPATH}
+fi
+
+# HBase detection. Need bin/hbase and a conf dir for building classpath entries.
+# Start with BigTop defaults for HBASE_HOME and HBASE_CONF_DIR.
+HBASE_HOME=${HBASE_HOME:-"/usr/lib/hbase"}
+HBASE_CONF_DIR=${HBASE_CONF_DIR:-"/etc/hbase/conf"}
+if [[ ! -d $HBASE_CONF_DIR ]] ; then
+  # not explicitly set, nor in BigTop location. Try looking in HBASE_HOME.
+  HBASE_CONF_DIR="$HBASE_HOME/conf"
+fi
+
+# perhaps we've located the HBase config. if so, include it on classpath.
+if [[ -d $HBASE_CONF_DIR ]] ; then
+  export HADOOP_CLASSPATH="${HADOOP_CLASSPATH}:${HBASE_CONF_DIR}"
+fi
+
+# look for the hbase script. First check HBASE_HOME and then ask PATH.
+if [[ -e $HBASE_HOME/bin/hbase ]] ; then
+  HBASE_BIN="$HBASE_HOME/bin/hbase"
+fi
+HBASE_BIN=${HBASE_BIN:-"$(which hbase)"}
+
+# perhaps we've located HBase. If so, include its details on the classpath
+if [[ -n $HBASE_BIN ]] ; then
+  # exclude ZK, PB, and Guava (See HIVE-2055)
+  # depends on HBASE-8438 (hbase-0.94.14+, hbase-0.96.1+) for `hbase mapredcp` command
+  for x in $($HBASE_BIN mapredcp | tr ':' '\n') ; do
+    if [[ $x == *zookeeper* || $x == *protobuf-java* || $x == *guava* ]] ; then
+      continue
+    fi
+    # TODO: should these should be added to AUX_PARAM as well?
+    export HADOOP_CLASSPATH="${HADOOP_CLASSPATH}:${x}"
+  done
+fi
+
+if [ "${AUX_PARAM}" != "" ]; then
+  if [[ "$SERVICE" != beeline ]]; then
+    HIVE_OPTS="$HIVE_OPTS --hiveconf hive.aux.jars.path=${AUX_PARAM}"
+  fi
+  AUX_JARS_CMD_LINE="-libjars ${AUX_PARAM}"
+fi
+
+SERVICE_LIST=""
+
+# execHiveCmd.sh start
+CLI_JAR="hive-cli-*.jar"
+BEELINE_JAR="hive-beeline-*.jar"
+
+execHiveCmd () {
+  CLASS=$1;
+  shift;
+
+  # if jar is not passed as parameter use corresponding cli jar
+  if [ "$1" == "$CLI_JAR" ] || [ "$1" == "$BEELINE_JAR" ]; then
+    JAR="$1"
+    shift;
+  else
+    if [ "$USE_DEPRECATED_CLI" == "true" ]; then
+      JAR="$CLI_JAR"
+    else
+      JAR="$BEELINE_JAR"
+    fi
+  fi
+
+  # cli specific code
+  if [ ! -f ${HIVE_LIB}/$JAR ]; then
+    echo "Missing $JAR Jar"
+    exit 3;
+  fi
+
+  if $cygwin; then
+    HIVE_LIB=`cygpath -w "$HIVE_LIB"`
+  fi
+
+  # hadoop 20 or newer - skip the aux_jars option. picked up from hiveconf
+  exec $HADOOP jar ${HIVE_LIB}/$JAR $CLASS $HIVE_OPTS "$@"
+}
+# execHiveCmd.sh end
+
+# cli.sh start
+THISSERVICE=cli
+export SERVICE_LIST="${SERVICE_LIST}${THISSERVICE} "
+
+# Set old CLI as the default client
+# if USE_DEPRECATED_CLI is not set or is not equal to false use old CLI
+if [ -z "$USE_DEPRECATED_CLI" ] || [ "$USE_DEPRECATED_CLI" != "false" ]; then
+  USE_DEPRECATED_CLI="true"
+fi
+
+updateBeelineOpts() {
+  # If process is backgrounded, don't change terminal settings
+  if [[ ( ! $(ps -o stat= -p $$) =~ *+ ) && ! ( -p /dev/stdin ) ]]; then
+    export HADOOP_CLIENT_OPTS="$HADOOP_CLIENT_OPTS -Djline.terminal=jline.UnsupportedTerminal"
+  fi
+}
+
+updateCli() {
+  if [ $USE_DEPRECATED_CLI == "true" ]; then
+    CLASS=org.apache.hadoop.hive.cli.CliDriver
+    JAR=hive-cli-*.jar
+  else
+    export HADOOP_CLIENT_OPTS="$HADOOP_CLIENT_OPTS -Dlog4j.configuration=beeline-log4j.properties"
+    CLASS=org.apache.hive.beeline.cli.HiveCli
+    JAR=hive-beeline-*.jar
+    updateBeelineOpts
+  fi
+}
+
+cli () {
+  updateCli
+  execHiveCmd $CLASS $JAR "$@"
+}
+
+cli_help () {
+  updateCli
+  execHiveCmd $CLASS $JAR "--help"
+}
+# cli.sh end
+
+# beeline.sh start
+THISSERVICE=beeline
+export SERVICE_LIST="${SERVICE_LIST}${THISSERVICE} "
+
+beeline () {
+  CLASS=org.apache.hive.beeline.BeeLine;
+
+  # include only the beeline client jar and its dependencies
+  beelineJarPath=`ls ${HIVE_LIB}/hive-beeline-*.jar`
+  superCsvJarPath=`ls ${HIVE_LIB}/super-csv-*.jar`
+  jlineJarPath=`ls ${HIVE_LIB}/jline-*.jar`
+  jdbcStandaloneJarPath=`ls ${HIVE_LIB}/hive-jdbc-*-standalone.jar`
+  hadoopClasspath=""
+  if [[ -n "${HADOOP_CLASSPATH}" ]]
+  then
+    hadoopClasspath="${HADOOP_CLASSPATH}:"
+  fi
+  export HADOOP_CLASSPATH="${hadoopClasspath}${HIVE_CONF_DIR}:${beelineJarPath}:${superCsvJarPath}:${jlineJarPath}:${jdbcStandaloneJarPath}"
+  export HADOOP_CLIENT_OPTS="$HADOOP_CLIENT_OPTS -Dlog4j.configuration=beeline-log4j.properties "
+
+  # some Java parameters
+  JAVA_HEAP_MAX=-Xmx1000m 
+
+  # check envvars which might override default args
+  if [ "$HADOOP_HEAPSIZE" != "" ]; then
+    #echo "run with heapsize $HADOOP_HEAPSIZE"
+    JAVA_HEAP_MAX="-Xmx""$HADOOP_HEAPSIZE""m"
+    #echo $JAVA_HEAP_MAX
+  fi
+
+  JAVA=$JAVA_HOME/bin/java
+  export CLASSPATH
+  exec "$JAVA" $JAVA_HEAP_MAX org.apache.hadoop.util.RunJar ${beelineJarPath} $CLASS $HIVE_OPTS "$@"
+}
+
+beeline_help () {
+  beeline "--help"
+} 
+# beeline.sh end
+
+if [ "$DEBUG" ]; then
+  if [ "$HELP" ]; then
+    debug_help
+    exit 0
+  else
+    get_debug_params "$DEBUG"
+    export HADOOP_CLIENT_OPTS="$HADOOP_CLIENT_OPTS $HIVE_MAIN_CLIENT_DEBUG_OPTS"
+  fi
+fi
+
+TORUN=""
+for j in $SERVICE_LIST ; do
+  if [ "$j" = "$SERVICE" ] ; then
+    TORUN=${j}$HELP
+  fi
+done
+
+if [ "$TORUN" = "" ] ; then
+  echo "Service $SERVICE not found"
+  echo "Available Services: $SERVICE_LIST"
+  exit 7
+else
+  $TORUN "$@"
+fi
+

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [[ "$PRINCIPAL_NAME" ]]
+  then
+    kinit -kt /root/kerberos.keytab $PRINCIPAL_NAME
+fi
+
+JAVA=/usr/bin/java
+SQOOP_LIB=/opt/sqoop/jars/*
+HADOOP_CONF_DIR=/opt/hdfs/conf
+HIVE_BIN_PATH=/opt/hive/bin
+HIVE_CONF_DIR=/opt/hive/conf
+HIVE_LIB=/opt/hive/jars/*
+export CLASSPATH=${SQOOP_LIB}:${HADOOP_CONF_DIR}:${HIVE_BIN_PATH}:${HIVE_CONF_DIR}:${HIVE_LIB}
+exec "$JAVA" -Xmx1000m org.apache.sqoop.Sqoop "$@"
