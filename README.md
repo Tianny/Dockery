@@ -3,4 +3,4 @@
 
 ## hadoop-client
 
-A simple Hadoop client (CDH) with kerberos including hdfs、beeline、hive-cli、sqoop.
+A minium Hadoop client (CDH) with kerberos including hdfs、beeline、hive-cli、sqoop.
