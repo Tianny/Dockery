@@ -4,3 +4,7 @@
 ## hadoop-client
 
 A minium Hadoop client (CDH) with kerberos including hdfs、beeline、hive-cli、sqoop.
+
+## JRE
+
+Java RunTime Environment
