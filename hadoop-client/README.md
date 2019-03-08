@@ -1,3 +1,14 @@
+> 寻找最小化 jar 包方法举例:
+
+> 直接执行 hdfs 客户端命令，提示少什么类，找到对应的 jar 包加进去就可以了
+
+> hdsf 客户端需要的 jar 包在 common/lib 和 hdfs/lib 下。
+
+> 比如提示少 <code>org.apache.commons.codec.DecoderException</code> 这个 Class，去 lib 目录下，执行以下命令，就可以找到该类对应的 jar 包
+
+```bash
+find . -name '*.jar' -exec bash -c 'jar -tf {} | grep -iH --label {} org.apache.commons.codec.DecoderException' \;
+```
 ## 准备工作
 
 - 将各客户端子目录 jars 中的 jar 包替换为实际的 CDH 版本（目前为 CDH 5.13.1）
