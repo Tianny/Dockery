@@ -16,7 +16,7 @@
   </property>
   <property>
     <name>ha.zookeeper.quorum</name>
-    <value>master4.uc.host.dxy:2181,master5.uc.host.dxy:2181,master6.uc.host.dxy:2181</value>
+    <value>master4.uc.host.tc:2181,master5.uc.host.tc:2181,master6.uc.host.tc:2181</value>
   </property>
   <property>
     <name>dfs.ha.namenodes.nameservice1</name>
@@ -24,35 +24,35 @@
   </property>
   <property>
     <name>dfs.namenode.rpc-address.nameservice1.namenode413</name>
-    <value>master4.uc.host.dxy:8020</value>
+    <value>master4.uc.host.tc:8020</value>
   </property>
   <property>
     <name>dfs.namenode.servicerpc-address.nameservice1.namenode413</name>
-    <value>master4.uc.host.dxy:8022</value>
+    <value>master4.uc.host.tc:8022</value>
   </property>
   <property>
     <name>dfs.namenode.http-address.nameservice1.namenode413</name>
-    <value>master4.uc.host.dxy:50070</value>
+    <value>master4.uc.host.tc:50070</value>
   </property>
   <property>
     <name>dfs.namenode.https-address.nameservice1.namenode413</name>
-    <value>master4.uc.host.dxy:50470</value>
+    <value>master4.uc.host.tc:50470</value>
   </property>
   <property>
     <name>dfs.namenode.rpc-address.nameservice1.namenode424</name>
-    <value>master5.uc.host.dxy:8020</value>
+    <value>master5.uc.host.tc:8020</value>
   </property>
   <property>
     <name>dfs.namenode.servicerpc-address.nameservice1.namenode424</name>
-    <value>master5.uc.host.dxy:8022</value>
+    <value>master5.uc.host.tc:8022</value>
   </property>
   <property>
     <name>dfs.namenode.http-address.nameservice1.namenode424</name>
-    <value>master5.uc.host.dxy:50070</value>
+    <value>master5.uc.host.tc:50070</value>
   </property>
   <property>
     <name>dfs.namenode.https-address.nameservice1.namenode424</name>
-    <value>master5.uc.host.dxy:50470</value>
+    <value>master5.uc.host.tc:50470</value>
   </property>
   <property>
     <name>dfs.replication</name>

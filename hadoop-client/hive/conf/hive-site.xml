@@ -4,7 +4,7 @@
 <configuration>
   <property>
     <name>hive.metastore.uris</name>
-    <value>thrift://master4.uc.host.dxy:9083</value>
+    <value>thrift://master4.uc.host.tc:9083</value>
   </property>
   <property>
     <name>hive.metastore.client.socket.timeout</name>
@@ -184,7 +184,7 @@
   </property>
   <property>
     <name>hive.zookeeper.quorum</name>
-    <value>master4.uc.host.dxy,master6.uc.host.dxy,master5.uc.host.dxy</value>
+    <value>master4.uc.host.tc,master6.uc.host.tc,master5.uc.host.tc</value>
   </property>
   <property>
     <name>hive.zookeeper.client.port</name>

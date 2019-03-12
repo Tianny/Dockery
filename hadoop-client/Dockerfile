@@ -1,5 +1,5 @@
-FROM registry.uc.host.dxy/library/java
-MAINTAINER xietian@dxy.cn
+FROM registry.uc.host.tc/library/java
+MAINTAINER xietian@tc.cn
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -yq krb5-user

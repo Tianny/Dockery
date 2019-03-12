@@ -114,11 +114,11 @@ DEFAULT</value>
   </property>
   <property>
     <name>hadoop.security.group.mapping.ldap.bind.user</name>
-    <value>cn=admin,dc=uc,dc=host,dc=dxy</value>
+    <value>cn=admin,dc=uc,dc=host,dc=tc</value>
   </property>
   <property>
     <name>hadoop.security.group.mapping.ldap.base</name>
-    <value>dc=uc,dc=host,dc=dxy</value>
+    <value>dc=uc,dc=host,dc=tc</value>
   </property>
   <property>
     <name>hadoop.security.group.mapping.ldap.search.filter.user</name>
